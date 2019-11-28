@@ -24,3 +24,4 @@ part 'src/line.dart';
 part 'src/circle.dart';
 part 'src/ui.dart';
 part 'src/global.dart';
+part 'src/offline_region.dart';

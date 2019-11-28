@@ -4,6 +4,7 @@
 
 package com.mapbox.mapboxgl;
 
+import android.content.Context;
 import android.graphics.Point;
 
 import com.mapbox.mapboxsdk.camera.CameraPosition;
@@ -13,6 +14,8 @@ import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.geometry.LatLngBounds;
 import com.mapbox.mapboxsdk.log.Logger;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.mapboxsdk.offline.OfflineRegionDefinition;
+import com.mapbox.mapboxsdk.offline.OfflineTilePyramidRegionDefinition;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -468,5 +471,19 @@ class Convert {
       Logger.e(TAG, "SetDraggable");
       sink.setDraggable(toBoolean(draggable));
     }
+  }
+
+  static OfflineRegionDefinition interpretOfflineRegionOptions(Object o, Context context) {
+    final Map<?, ?> data = toMap(o);
+
+    final String style = toString(data.get("style"));
+    final LatLng northEastBound = toLatLng(data.get("northEastBound"));
+    final LatLng southWestBound = toLatLng(data.get("southWestBound"));
+    final LatLngBounds bounds = LatLngBounds.from(northEastBound.getLatitude(), northEastBound.getLongitude(), southWestBound.getLatitude(), southWestBound.getLongitude());
+    final Double minZoomLevel = toDouble(data.get("minZoom"));
+    final Double maxZoomLevel = toDouble(data.get("maxZoom"));
+    final Float density = context.getResources().getDisplayMetrics().density;
+
+    return new OfflineTilePyramidRegionDefinition(style, bounds, minZoomLevel, maxZoomLevel, density);
   }
 }
