@@ -39,11 +39,44 @@ public class SwiftMapboxGlFlutterPlugin: NSObject, FlutterPlugin {
                                                          fromZoomLevel: minZoom,
                                                          toZoomLevel: maxZoom)
                 
-                MGLOfflineStorage.shared.addPack(for: region, withContext: Data.init(), completionHandler: {(pack, error) in
-                    pack?.resume()
+                MGLOfflineStorage.shared.addPack(for: region, withContext: metadata as! Data, completionHandler: {(pack, error) in
+                    guard error == nil else {
+                        result(error?.localizedDescription)
+                        return
+                    }
+                    
+                    downloadResult = result
+                    pack!.resume()
                 })
+            case "listOfflineRegions":
+                result(MGLOfflineStorage.shared.packs) // TODO encode
+            case "deleteOfflineRegion":
+                guard let arguments = methodCall.arguments as? [String: AnyObject] else { return }
                 
-                downloadResult = result
+                let metadata = arguments["metadata"]
+                let style = arguments["style"] as! String
+                let northEastBoundString = arguments["northEastBound"] as! Array<Double>
+                let northEastBound = CLLocationCoordinate2DMake(northEastBoundString[0], northEastBoundString[1])
+                let southWestBoundString = arguments["southWestBound"] as! Array<Double>
+                let southWestBound = CLLocationCoordinate2DMake(southWestBoundString[0], southWestBoundString[1])
+                let minZoom = arguments["minZoom"] as! Double
+                let maxZoom = arguments["maxZoom"] as! Double
+                
+                let region = MGLTilePyramidOfflineRegion(styleURL: URL.init(string: style),
+                                                         bounds: MGLCoordinateBounds(sw: southWestBound, ne: northEastBound),
+                                                         fromZoomLevel: minZoom,
+                                                         toZoomLevel: maxZoom)
+                for pack in MGLOfflineStorage.shared.packs! {
+                    // TODO if pack matches region
+                    MGLOfflineStorage.shared.removePack(pack, withCompletionHandler: {(error) in
+                        guard error == nil else {
+                            result(error?.localizedDescription)
+                            return
+                        }
+                    
+                        result(nil)
+                    })
+                }
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -51,45 +84,28 @@ public class SwiftMapboxGlFlutterPlugin: NSObject, FlutterPlugin {
     }
     
     @objc static func offlinePackProgressDidChange(notification: NSNotification) {
-        // Get the offline pack this notification is regarding,
-        // and the associated user info for the pack; in this case, `name = My Offline Pack`
         if let pack = notification.object as? MGLOfflinePack {
             let progress = pack.progress
-            // or notification.userInfo![MGLOfflinePackProgressUserInfoKey]!.MGLOfflinePackProgressValue
+
             let completedResources = progress.countOfResourcesCompleted
             let expectedResources = progress.countOfResourcesExpected
             
-            // Calculate current progress percentage.
-            let progressPercentage = Float(completedResources) / Float(expectedResources)
-            
-            print(progressPercentage)
-            
-            // If this pack has finished, print its size and resource count.
             if completedResources == expectedResources {
-                let byteCount = ByteCountFormatter.string(fromByteCount: Int64(pack.progress.countOfBytesCompleted), countStyle: ByteCountFormatter.CountStyle.memory)
-                print("Offline pack completed: \(byteCount), \(completedResources) resources")
-            } else {
-                // Otherwise, print download/verification progress.
-                print("Offline pack has \(completedResources) of \(expectedResources) resources — \(progressPercentage * 100)%.")
+                downloadResult!(nil)
             }
         }
     }
     
     @objc static func offlinePackDidReceiveError(notification: NSNotification) {
-        if let pack = notification.object as? MGLOfflinePack,
-//            let userInfo = NSKeyedUnarchiver.unarchiveObject(with: pack.context) as? [String: String],
-            let error = notification.userInfo?[MGLOfflinePackUserInfoKey.error] as? NSError {
-            print("Offline pack received error: \(error.localizedFailureReason ?? "unknown error")")
+        if let error = notification.userInfo?[MGLOfflinePackUserInfoKey.error] as? NSError {
+            downloadResult!(error.localizedFailureReason)
+            downloadResult = nil
         }
-        
     }
     
     @objc static func offlinePackDidReceiveMaximumAllowedMapboxTiles(notification: NSNotification) {
-        if let pack = notification.object as? MGLOfflinePack,
-//            let userInfo = NSKeyedUnarchiver.unarchiveObject(with: pack.context) as? [String: String],
-            let maximumCount = (notification.userInfo?[MGLOfflinePackUserInfoKey.maximumCount] as AnyObject).uint64Value {
-            print("Offline pack reached limit of \(maximumCount) tiles.")
-        }
+        downloadResult!("Maximum # tiles reached")
+        downloadResult = nil
     }
 
     private static func getTilesUrl() -> URL {
