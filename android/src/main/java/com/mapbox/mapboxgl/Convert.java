@@ -490,4 +490,16 @@ class Convert {
 
     return new OfflineTilePyramidRegionDefinition(style, bounds, minZoomLevel, maxZoomLevel, density);
   }
+
+  static Object offlineRegionOptionsToDTO(OfflineRegionDefinition definition) {
+    final Map<String, Object> data = new HashMap();
+
+    data.put("style", definition.getStyleURL());
+    data.put("northEastBound", new double[]{definition.getBounds().getNorthEast().getLatitude(), definition.getBounds().getNorthEast().getLongitude()});
+    data.put("southWestBound", new double[]{definition.getBounds().getSouthWest().getLatitude(), definition.getBounds().getSouthWest().getLongitude()});
+    data.put("minZoom", definition.getMinZoom());
+    data.put("maxZoom", definition.getMaxZoom());
+
+    return data;
+  }
 }

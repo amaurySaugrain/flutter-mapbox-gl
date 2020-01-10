@@ -1,22 +1,12 @@
 part of mapbox_gl;
 
-class OfflineRegion {
-  final String _id;
-  final OfflineRegionOptions _offlineRegionOptions;
-
-  const OfflineRegion(this._id, this._offlineRegionOptions);
-
-  String get id => _id;
-  OfflineRegionOptions get offlineRegionOptions => _offlineRegionOptions;
-}
-
 class OfflineRegionOptions {
   final String style;
   final LatLng northEastBound;
   final LatLng southWestBound;
   final double minZoom;
   final double maxZoom;
-  final Map<String, dynamic> metadata;
+  final Map<String, String> metadata;
 
   const OfflineRegionOptions(
       this.style,
@@ -27,7 +17,7 @@ class OfflineRegionOptions {
       this.metadata
   );
 
-  dynamic _toJson() {
+  dynamic _toPayload() {
     final Map<String, dynamic> json = <String, dynamic>{};
 
     json['style'] = style;
@@ -35,8 +25,19 @@ class OfflineRegionOptions {
     json['southWestBound'] = southWestBound._toJson();
     json['minZoom'] = minZoom;
     json['maxZoom'] = maxZoom;
-    json['metadata'] = metadata;
+    json['metadata'] = jsonEncode(metadata);
 
     return json;
+  }
+
+  static OfflineRegionOptions _fromPayload(Map<String, dynamic> payload) {
+    return OfflineRegionOptions(
+        payload['style'],
+        LatLng(payload['northEastBound'][0], payload['northEastBound'][1]),
+        LatLng(payload['southWestBound'][0], payload['southWestBound'][1]),
+        payload['minZoom'],
+        payload['maxZoom'],
+        jsonDecode(payload['metadata'])
+    );
   }
 }

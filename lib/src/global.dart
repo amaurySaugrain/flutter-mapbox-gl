@@ -18,16 +18,24 @@ Future<void> installOfflineMapTiles(String tilesDb) async {
   );
 }
 
-dynamic downloadOfflineRegion(
+Future<bool> downloadOfflineRegion(
     OfflineRegionOptions offlineRegionOptions) async {
-  return await _globalChannel.invokeMethod('downloadOfflineRegion', offlineRegionOptions._toJson());
+  return _globalChannel.invokeMethod(
+      'downloadOfflineRegion', offlineRegionOptions._toPayload());
 }
 
-dynamic listOfflineRegions() async {
-  return await _globalChannel.invokeListMethod('listOfflineRegions');
+Future<dynamic> listOfflineRegions() async {
+  List<dynamic> returnedPayload =
+      await _globalChannel.invokeListMethod('listOfflineRegions');
+  List<OfflineRegionOptions> parsedOfflineRegions = [];
+  for (dynamic region in returnedPayload) {
+    parsedOfflineRegions.add(OfflineRegionOptions._fromPayload(region));
+  }
+  return parsedOfflineRegions;
 }
 
-Future<bool> deleteOfflineRegion(String regionId) async {
-  return await _globalChannel.invokeMethod(
-      'deleteOfflineRegion', <String, dynamic>{'regionId': regionId});
+Future<bool> deleteOfflineRegion(
+    OfflineRegionOptions offlineRegionOptions) async {
+  return _globalChannel.invokeMethod(
+      'deleteOfflineRegion', offlineRegionOptions._toPayload());
 }

@@ -3,6 +3,7 @@ package com.mapbox.mapboxgl;
 import android.content.Context;
 import android.util.Log;
 
+import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.offline.OfflineManager;
 import com.mapbox.mapboxsdk.offline.OfflineRegion;
 import com.mapbox.mapboxsdk.offline.OfflineRegionDefinition;
@@ -20,6 +21,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -45,42 +47,72 @@ class GlobalMethodHandler implements MethodChannel.MethodCallHandler {
                 break;
             case "downloadOfflineRegion":
                 Context context = registrar.context();
-                final OfflineRegionDefinition definition = Convert.interpretOfflineRegionOptions(
+                OfflineRegionDefinition definition = Convert.interpretOfflineRegionOptions(
                         methodCall.arguments, context);
-                final byte[] metadata = methodCall.argument("metadata");
+                final byte[] metadata = ((String) methodCall.argument("metadata")).getBytes();
                 OfflineManager.getInstance(context).createOfflineRegion(
                         definition, metadata, new OfflineManager.CreateOfflineRegionCallback() {
-                    @Override
-                    public void onCreate(OfflineRegion offlineRegion) {
-                        result.success(offlineRegion.getID());
-                    }
+                            @Override
+                            public void onCreate(OfflineRegion offlineRegion) {
+                                result.success(null); // TODO wait for done callback
+                            }
 
-                    @Override
-                    public void onError(String error) {
-                        result.error(error, null, null);
-                    }
-                });
+                            @Override
+                            public void onError(String error) {
+                                result.error(error, null, null);
+                            }
+                        });
                 break;
             case "listOfflineRegions":
                 OfflineManager.getInstance(registrar.context()).listOfflineRegions(
                         new OfflineManager.ListOfflineRegionsCallback() {
-                    @Override
-                    public void onList(OfflineRegion[] offlineRegions) {
-                        List<Long> ids = new ArrayList();
-                        for (OfflineRegion region : offlineRegions) {
-                            ids.add(region.getID());
-                        }
-                        result.success(ids);
-                    }
+                            @Override
+                            public void onList(OfflineRegion[] offlineRegions) {
+                                List<Object> regionDefinitions = new ArrayList();
+                                for (OfflineRegion region : offlineRegions) {
+                                    regionDefinitions.add(Convert.offlineRegionOptionsToDTO(region.getDefinition())); // TODO add metadata
+                                }
+                                result.success(regionDefinitions); // TODO convert to json
+                            }
 
-                    @Override
-                    public void onError(String error) {
-                        result.error(error, null, null);
-                    }
-                });
+                            @Override
+                            public void onError(String error) {
+                                result.error(error, null, null);
+                            }
+                        });
                 break;
             case "deleteOfflineRegion":
-                result.success(true);
+                context = registrar.context();
+                definition = Convert.interpretOfflineRegionOptions(
+                        methodCall.arguments, context);
+                OfflineManager.getInstance(context).listOfflineRegions(
+                        new OfflineManager.ListOfflineRegionsCallback() {
+                            @Override
+                            public void onList(OfflineRegion[] offlineRegions) {
+                                AtomicBoolean returned = new AtomicBoolean(false);
+                                for (OfflineRegion region : offlineRegions) {
+                                    if (region.getDefinition().getBounds().equals(definition.getBounds())) {
+                                        region.delete(new OfflineRegion.OfflineRegionDeleteCallback() {
+                                            @Override
+                                            public void onDelete() {
+                                                returned.set(true);
+                                            }
+
+                                            @Override
+                                            public void onError(String error) {
+                                                returned.set(true);
+                                            }
+                                        });
+                                    }
+                                }
+                                result.success(null);
+                            }
+
+                            @Override
+                            public void onError(String error) {
+                                result.error(error, null, null);
+                            }
+                        });
                 break;
             default:
                 result.notImplemented();

@@ -5,6 +5,7 @@
 library mapbox_gl;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 
