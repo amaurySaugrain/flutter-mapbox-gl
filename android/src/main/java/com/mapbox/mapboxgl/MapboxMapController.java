@@ -383,7 +383,26 @@ final class MapboxMapController
 
     lineLayer.setProperties(properties);
 
-    mapStyle.addLayer(lineLayer);
+    mapboxMap.getStyle().addLayer(lineLayer);
+  }
+
+  private void addHighlightLineLayer(String layerName,
+                            String sourceName,
+                            String lineSelectedId,
+                            PropertyValue[] properties,
+                            Expression filter) {
+    LineLayer lineLayer = new LineLayer(layerName, sourceName);
+
+    lineLayer.setProperties(properties);
+
+    mapboxMap.getStyle().addLayerBelow(lineLayer, lineSelectedId);
+  }
+
+  private void removeLayer(String layerName,
+                            String sourceName) {
+    LineLayer lineLayer = new LineLayer(layerName, sourceName);
+    mapboxMap.getStyle().removeLayer(lineLayer);
+    mapboxMap.getStyle().removeSource(sourceName);
   }
 
   private void enableSymbolManager(@NonNull Style style) {
@@ -594,6 +613,20 @@ final class MapboxMapController
         final String layerId = call.argument("layerId");
         final PropertyValue[] properties = Convert.interpretLineLayerProperties(call.argument("properties"));
         addLineLayer(layerId, sourceId, properties, null);
+        break;
+      }
+      case "highlightedLineLayer#add": {
+        final String sourceId = call.argument("sourceId");
+        final String layerId = call.argument("layerId");
+        final String lineSelectedId = call.argument("lineSelectedId");
+        final PropertyValue[] properties = Convert.interpretLineLayerProperties(call.argument("properties"));
+        addHighlightLineLayer(layerId, sourceId, lineSelectedId, properties, null);
+        break;
+      }
+      case "layer#remove": {
+        final String sourceId = call.argument("sourceId");
+        final String layerId = call.argument("layerId");
+        removeLayer(layerId, sourceId);
         break;
       }
       case "locationComponent#getLastLocation": {
