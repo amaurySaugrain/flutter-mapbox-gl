@@ -232,6 +232,22 @@ class MapboxMapController extends ChangeNotifier {
       'properties': properties
     });
   }
+  
+  Future<void> addHighlightedLineLayer(String sourceId, String layerId, String lineSelectedId, Map<String, String> properties) async {
+    await _channel.invokeMethod('highlightedLineLayer#add', <String, dynamic>{
+      'sourceId': sourceId,
+      'layerId': layerId,
+      'lineSelectedId': lineSelectedId,
+      'properties': properties
+    });
+  }
+
+  Future<void> removeLayer(String sourceId, String layerId) async {
+    await _channel.invokeMethod('layer#remove', <String, dynamic>{
+      'sourceId': sourceId,
+      'layerId': layerId
+    });
+  }
 
   /// Updates user location tracking mode.
   ///
