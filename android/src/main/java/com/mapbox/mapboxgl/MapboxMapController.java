@@ -361,7 +361,7 @@ final class MapboxMapController
     FeatureCollection featureCollection = FeatureCollection.fromJson(geojson);
     GeoJsonSource geoJsonSource = new GeoJsonSource(sourceName, featureCollection);
 
-    mapStyle.addSource(geoJsonSource);
+    mapboxMap.getStyle().addSource(geoJsonSource);
   }
 
   private void addSymbolLayer(String layerName,
@@ -372,7 +372,7 @@ final class MapboxMapController
 
     symbolLayer.setProperties(properties);
 
-    mapStyle.addLayer(symbolLayer);
+    mapboxMap.getStyle().addLayer(symbolLayer);
   }
 
   private void addLineLayer(String layerName,
